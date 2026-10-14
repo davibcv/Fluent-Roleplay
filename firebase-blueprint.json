@@ -1,0 +1,58 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User progress state, errors, recommendations and personalized configurations compiled as stringified JSON keys",
+      "type": "object",
+      "properties": {
+        "fluent_username": { "type": "string" },
+        "fluent_aligned": { "type": "string" },
+        "fluent_proficiency": { "type": "string" },
+        "fluent_est_months": { "type": "string" },
+        "fluent_focus": { "type": "string" },
+        "fluent_setting": { "type": "string" },
+        "fluent_character": { "type": "string" },
+        "fluent_init_reply": { "type": "string" },
+        "fluent_story_loaded": { "type": "string" },
+        "fluent_errors": { "type": "string" },
+        "fluent_strengths_nodes": { "type": "string" },
+        "fluent_adaptations": { "type": "string" },
+        "fluent_app_mode": { "type": "string" },
+        "fluent_strengths_summary": { "type": "string" },
+        "fluent_sim_state": { "type": "string" },
+        "fluent_voice_gender": { "type": "string" },
+        "fluent_recommendation_last_action": { "type": "string" },
+        "fluent_completed_nodes": { "type": "string" },
+        "fluent_consolidation_records": { "type": "string" },
+        "fluent_snapshots": { "type": "string" },
+        "fluent_tutorial_done": { "type": "string" },
+        "lastUpdatedAt": { "type": "string" }
+      },
+      "required": ["fluent_aligned", "lastUpdatedAt"]
+    },
+    "SystemConfiguration": {
+      "title": "SystemConfiguration",
+      "description": "Global developer configurations, templates, or instructions",
+      "type": "object",
+      "properties": {
+        "personality_manual": { "type": "string" },
+        "reaction_manual": { "type": "string" },
+        "intimacy_manual": { "type": "string" },
+        "raw_material_manual": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "updatedBy": { "type": "string" }
+      },
+      "required": ["personality_manual", "reaction_manual", "intimacy_manual", "raw_material_manual"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Individual user preferences and dynamic progression records mapped securely by UID"
+    },
+    "/system/{document}": {
+      "schema": "SystemConfiguration",
+      "description": "Global developer manuals and behavioral guidelines accessed by all instances"
+    }
+  }
+}

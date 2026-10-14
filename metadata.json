@@ -1,0 +1,10 @@
+{
+  "name": "FluentRoleplay",
+  "description": "An adaptive English learning application powered by Gemini. Features immersive roleplay with live character speech, smart linguistic feedback, and a structured 6-6-6 curriculum.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
