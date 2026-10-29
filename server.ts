@@ -3200,27 +3200,29 @@ app.post("/api/simulator-next", async (req: Request, res: Response) => {
             msg.character_id = matchedPrev.character_id;
             msg.character_name = matchedPrev.character_name;
           } else {
-            // Find active speaker from updatedState or state or fixed_characters
-            let speaker = updatedState.active_character;
+            // Prioritize already established active interlocutors
+            let speaker = updatedState.active_character || state.active_character;
+
+            // If not directly established, try matching by message name against known characters
             if (!speaker && updatedState.fixed_characters && updatedState.fixed_characters.length > 0) {
-              const msgCharName = msg.character_name || msg.sender;
+              const msgCharName = msg.character_name || (msg.sender !== "character" ? msg.sender : null);
               if (msgCharName) {
                 const normName = norm(msgCharName);
                 speaker = updatedState.fixed_characters.find((c: any) => {
                   if (!c) return false;
                   const cName = norm(c.name || "");
                   const cTitle = norm(c.temporary_title || "");
-                  return cName === normName || cName.includes(normName) || normName.includes(cName) || cTitle === normName;
+                  return cName === normName || cName.includes(normName) || normName.includes(cName) || (cTitle && cTitle === normName);
                 });
               }
-              if (!speaker) speaker = updatedState.fixed_characters[0];
             }
-            if (!speaker) speaker = state.active_character;
 
             if (speaker) {
               msg.character_id = speaker.id;
               msg.character_name = speaker.name;
-              updatedState.active_character = speaker;
+              if (!updatedState.active_character) {
+                updatedState.active_character = speaker;
+              }
             }
           }
         }
@@ -4572,10 +4574,33 @@ app.post("/api/group-vocabulary", async (req: Request, res: Response) => {
 });
 
 
+// In-memory cache for Course Generation (TTL: 2 hours, max 100 entries)
+interface CourseCacheEntry {
+  data: any;
+  timestamp: number;
+}
+const courseGenCache = new Map<string, CourseCacheEntry>();
+const COURSE_CACHE_TTL_MS = 2 * 60 * 60 * 1000;
+
+function cleanCourseGenCache() {
+  const now = Date.now();
+  for (const [k, v] of courseGenCache.entries()) {
+    if (now - v.timestamp > COURSE_CACHE_TTL_MS) {
+      courseGenCache.delete(k);
+    }
+  }
+}
+
 // Course Phase Generator / Course Evaluation (6-6-6 Training Protocol)
 app.post("/api/course-generate", async (req: Request, res: Response) => {
   try {
     const { grammaticalFocus, exerciseType, vocabWords, learnedMandatoryVocab, vocabDifficulties } = req.body;
+
+    const cacheKey = `${String(grammaticalFocus || "").trim().toLowerCase()}_${exerciseType || "GRAMMAR"}_${Array.isArray(vocabWords) ? vocabWords.map((w: any) => w.en || w).sort().join(",") : ""}`;
+    const cached = courseGenCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp < COURSE_CACHE_TTL_MS)) {
+      return res.json(cached.data);
+    }
     const isVocab = exerciseType === "VOCABULARY";
     const isChunks = exerciseType === "CHUNKS";
     const ai = getGeminiClient();
@@ -4656,6 +4681,10 @@ app.post("/api/course-generate", async (req: Request, res: Response) => {
     });
 
     const parsed = JSON.parse(response.text || "{}");
+    
+    if (courseGenCache.size >= 100) cleanCourseGenCache();
+    courseGenCache.set(cacheKey, { data: parsed, timestamp: Date.now() });
+
     res.json(parsed);
   } catch (error: any) {
     console.error("Error in course-generate:", error);
@@ -4963,6 +4992,23 @@ Incentive o aluno a usar essas palavras nas respostas dele, faça perguntas cont
   }
 });
 
+// In-memory cache for Teacher Welcome (TTL: 2 hours, max 100 entries)
+interface TeacherWelcomeCacheEntry {
+  data: any;
+  timestamp: number;
+}
+const teacherWelcomeCache = new Map<string, TeacherWelcomeCacheEntry>();
+const TEACHER_WELCOME_CACHE_TTL_MS = 2 * 60 * 60 * 1000;
+
+function cleanTeacherWelcomeCache() {
+  const now = Date.now();
+  for (const [k, v] of teacherWelcomeCache.entries()) {
+    if (now - v.timestamp > TEACHER_WELCOME_CACHE_TTL_MS) {
+      teacherWelcomeCache.delete(k);
+    }
+  }
+}
+
 // Virtual Teacher personalized lesson welcome
 app.post("/api/teacher-welcome", async (req: Request, res: Response) => {
   let grammaticalFocus = "Present Perfect";
@@ -4979,6 +5025,12 @@ app.post("/api/teacher-welcome", async (req: Request, res: Response) => {
     } = req.body;
     if (reqFocus) grammaticalFocus = reqFocus;
     if (reqUser) username = reqUser;
+
+    const cacheKey = `${String(grammaticalFocus).trim().toLowerCase()}_${exerciseType || "GRAMMAR"}_${baselineProficiency || "intermediate"}_${Array.isArray(vocabWords) ? vocabWords.map((w: any) => w.en || w).sort().join(",") : ""}`;
+    const cached = teacherWelcomeCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp < TEACHER_WELCOME_CACHE_TTL_MS)) {
+      return res.json(cached.data);
+    }
     
     const ai = getGeminiClient();
 
@@ -5057,11 +5109,16 @@ Apresente as palavras de forma calorosa no início da aula, pergunte o significa
     const output = response.text || "";
     const parsed = parseGeminiOutput(output);
     
-    // Ensure we send back both text and the parsed summary
-    res.json({ 
+    const resultPayload = { 
       text: parsed.text, 
       summary: parsed.json 
-    });
+    };
+
+    if (teacherWelcomeCache.size >= 100) cleanTeacherWelcomeCache();
+    teacherWelcomeCache.set(cacheKey, { data: resultPayload, timestamp: Date.now() });
+
+    // Ensure we send back both text and the parsed summary
+    res.json(resultPayload);
   } catch (error: any) {
     console.error("Error in teacher-welcome:", error);
     res.json({ 

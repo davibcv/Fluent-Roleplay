@@ -321,10 +321,28 @@ export default function CourseScreen({
   const [errorMessage, setErrorMessage] = useState('');
   const [apiQuotaError, setApiQuotaError] = useState<{ isQuota: boolean; message: string; estimate: string } | null>(null);
 
-  // Auto fetch structured curriculum based on grammaticalFocus or exerciseType
+  const getCurriculumCacheKey = () => `fluent_course_cache_${grammaticalFocus}_${exerciseType}`;
+
+  // Auto fetch structured curriculum ONLY when activeTab is EXERCISING and data is not yet loaded
   useEffect(() => {
-    fetchCurriculum();
-  }, [grammaticalFocus, exerciseType]);
+    if (activeTab === 'EXERCISING') {
+      const cacheKey = getCurriculumCacheKey();
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          const parsedCache = JSON.parse(cached);
+          if (parsedCache && parsedCache.theory && parsedCache.phase1) {
+            setCourseData(parsedCache);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn("[CourseScreen] Failed to read cached curriculum:", e);
+      }
+      fetchCurriculum();
+    }
+  }, [activeTab, grammaticalFocus, exerciseType]);
 
   const getMandatoryGroups = () => {
     try {
@@ -368,6 +386,15 @@ export default function CourseScreen({
       }
 
       const data = await response.json();
+      if (!data || !data.theory || !Array.isArray(data.phase1) || data.phase1.length === 0) {
+        throw new Error("O conteúdo da aula foi retornado incompleto ou em formato inesperado.");
+      }
+      try {
+        sessionStorage.setItem(getCurriculumCacheKey(), JSON.stringify(data));
+      } catch (cacheErr) {
+        console.warn("[CourseScreen] Failed to save curriculum to cache:", cacheErr);
+      }
+
       setCourseData(data);
       setCurrentSection('THEORY');
       setMcqIndex(0);
@@ -377,7 +404,7 @@ export default function CourseScreen({
       setHardAnswers(['', '', '', '', '', '']);
       setHardResults(null);
     } catch (err: any) {
-      const errMsg = err.message || 'Error generating course content.';
+      const errMsg = err.message || "Error generating course content.";
       const isQuotaText = errMsg.includes("429") || 
         errMsg.toLowerCase().includes("quota") || 
         errMsg.toLowerCase().includes("exhausted") || 
@@ -568,6 +595,41 @@ export default function CourseScreen({
         >
           Reestabelecer Conexão
         </button>
+      </div>
+    );
+  }
+
+  // Fallback e recuperação para erros genéricos ou ausência de dados na aba de exercícios
+  if (activeTab === "EXERCISING" && (!courseData || errorMessage)) {
+    return (
+      <div className="max-w-md mx-auto py-12 px-6 bg-white border border-[#e8e2d5] rounded-3xl shadow-sm text-center my-10 font-serif">
+        <div className="w-12 h-12 rounded-full mx-auto flex items-center justify-center bg-rose-50 text-rose-600 mb-4 text-xl border border-rose-200">
+          ⚠️
+        </div>
+        <h3 className="text-xl font-serif font-bold text-classic-ink">Não foi possível carregar a aula</h3>
+        <p className="text-xs text-[#8e8574] leading-relaxed max-w-xs mx-auto mt-2">
+          {errorMessage || "Houve uma instabilidade ao montar o conteúdo adaptativo desta lição."}
+        </p>
+        <div className="mt-6 flex flex-col gap-2">
+          <button
+            onClick={() => {
+              setErrorMessage("");
+              fetchCurriculum();
+            }}
+            className="w-full py-2.5 bg-classic-green hover:bg-classic-green-light text-white font-semibold text-xs rounded-xl transition-colors cursor-pointer"
+          >
+            Tentar Novamente
+          </button>
+          <button
+            onClick={() => {
+              setErrorMessage("");
+              setActiveTab("MENU");
+            }}
+            className="w-full py-2.5 bg-transparent border border-[#e2dacb] text-[#7d715e] hover:bg-[#FAF6EE] font-semibold text-xs rounded-xl transition-colors cursor-pointer"
+          >
+            Voltar ao Menu do Curso
+          </button>
+        </div>
       </div>
     );
   }

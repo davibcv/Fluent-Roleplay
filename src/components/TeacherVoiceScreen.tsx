@@ -92,9 +92,32 @@ export default function TeacherVoiceScreen({
   const isRecordingRef = useRef(false);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
 
-  // Initialize personalized welcome on mount
+  const getTeacherCacheKey = () => `fluent_teacher_welcome_${grammaticalFocus}_${exerciseType || "GRAMMAR"}_${baselineProficiency || "intermediate"}`;
+
+  // Initialize personalized welcome on mount with cache support
   useEffect(() => {
     let active = true;
+    const cacheKey = getTeacherCacheKey();
+
+    try {
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        const data = JSON.parse(cached);
+        if (data && data.text) {
+          setMessages([{ sender: 'teacher', text: data.text }]);
+          if (data.summary) setGrammarSummary(data.summary);
+          setWelcomeLoading(false);
+          setTimeout(() => {
+            if (active && isTTSActive) {
+              speakText(data.text);
+            }
+          }, 400);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("[TeacherVoiceScreen] Failed reading cached welcome:", e);
+    }
     
     const loadPersonalizedWelcome = async () => {
       setWelcomeLoading(true);
@@ -116,6 +139,12 @@ export default function TeacherVoiceScreen({
         if (!response.ok) throw new Error("Erro de resposta");
         const data = await response.json();
 
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify(data));
+        } catch (saveErr) {
+          console.warn("[TeacherVoiceScreen] Failed saving welcome to cache:", saveErr);
+        }
+
         if (active) {
           setMessages([{ sender: 'teacher', text: data.text }]);
           if (data.summary) {
@@ -133,7 +162,7 @@ export default function TeacherVoiceScreen({
       } catch (e) {
         console.error("Failed to load personalized welcome:", e);
         if (active) {
-          const fallback = `Olá, ${username || 'Estudante'}! Eu sou a professora Madson, sua tutora particular de inglês. Hoje faremos uma aula focada em em **${grammaticalFocus}** de acordo com sua proficiência. Vamos dar o primeiro passo prático?`;
+          const fallback = `Olá, ${username || 'Estudante'}! Eu sou a professora Madson, sua tutora particular de inglês. Hoje faremos uma aula focada em **${grammaticalFocus}** de acordo com sua proficiência. Vamos dar o primeiro passo prático?`;
           setMessages([{ sender: 'teacher', text: fallback }]);
           setWelcomeLoading(false);
           setTimeout(() => {
@@ -456,6 +485,24 @@ export default function TeacherVoiceScreen({
     setMessages([]);
     setSessionErrors([]);
     setCompletionFeedback(null);
+
+    const cacheKey = getTeacherCacheKey();
+    try {
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        const data = JSON.parse(cached);
+        if (data && data.text) {
+          setMessages([{ sender: 'teacher', text: data.text }]);
+          if (data.summary) setGrammarSummary(data.summary);
+          setWelcomeLoading(false);
+          if (isTTSActive) speakText(data.text);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("[TeacherVoiceScreen] Error reading cache on restart:", e);
+    }
+
     setWelcomeLoading(true);
 
     apiFetch('/api/teacher-welcome', {
@@ -467,11 +514,17 @@ export default function TeacherVoiceScreen({
         username,
         strengthsSummary,
         globalErrors,
-        exerciseType
+        exerciseType,
+        vocabWords
       })
     })
     .then(res => res.json())
     .then(data => {
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify(data));
+      } catch (err) {
+        console.warn("[TeacherVoiceScreen] Error caching on restart:", err);
+      }
       setMessages([{ sender: 'teacher', text: data.text }]);
       if (data.summary) setGrammarSummary(data.summary);
       setWelcomeLoading(false);
