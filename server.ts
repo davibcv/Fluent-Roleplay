@@ -5826,6 +5826,15 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`FluentRoleplay app running at http://localhost:${PORT}`);
+    if (process.env.CODESPACES === "true" && process.env.CODESPACE_NAME) {
+      import("child_process").then(({ exec }) => {
+        exec(`gh codespace ports visibility ${PORT}:public -c "${process.env.CODESPACE_NAME}"`, (err) => {
+          if (!err) {
+            console.log(`[Codespaces] Port ${PORT} auto-configured to public.`);
+          }
+        });
+      }).catch(() => {});
+    }
   });
 }
 
