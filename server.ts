@@ -201,7 +201,7 @@ app.use((req, res, next) => {
   });
 });
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Helper to mask API keys safely for diagnostics and logs
 export function maskApiKey(key: string | undefined): string {
@@ -5818,6 +5818,11 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
+    app.get("/sw.js", (req: Request, res: Response) => {
+      res.setHeader("Service-Worker-Allowed", "/");
+      res.setHeader("Content-Type", "application/javascript");
+      res.sendFile(path.join(distPath, "sw.js"));
+    });
     app.use(express.static(distPath));
     app.get("*", (req: Request, res: Response) => {
       res.sendFile(path.join(distPath, "index.html"));
@@ -5826,15 +5831,6 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`FluentRoleplay app running at http://localhost:${PORT}`);
-    if (process.env.CODESPACES === "true" && process.env.CODESPACE_NAME) {
-      import("child_process").then(({ exec }) => {
-        exec(`gh codespace ports visibility ${PORT}:public -c "${process.env.CODESPACE_NAME}"`, (err) => {
-          if (!err) {
-            console.log(`[Codespaces] Port ${PORT} auto-configured to public.`);
-          }
-        });
-      }).catch(() => {});
-    }
   });
 }
 

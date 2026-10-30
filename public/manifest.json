@@ -1,16 +1,19 @@
 {
   "short_name": "FluentRoleplay",
   "name": "FluentRoleplay — Immersive English Sandbox",
+  "description": "Adaptive Immersive English Sandbox & AI Roleplay Trainer",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#050507",
   "theme_color": "#050507",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "src": "/icons/icon.svg",
+      "sizes": "192x192 512x512 any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }

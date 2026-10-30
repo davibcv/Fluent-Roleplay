@@ -6,8 +6,8 @@
   "portsAttributes": {
     "3000": {
       "label": "Application",
-      "onAutoForward": "openBrowser",
-      "visibility": "public"
+      "onAutoForward": "openBrowser"
     }
-  }
+  },
+  "postStartCommand": "nohup bash .devcontainer/ensure-public-port.sh > /tmp/ensure-public-port.log 2>&1 &"
 }

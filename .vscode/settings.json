@@ -1,0 +1,10 @@
+{
+  "remote.portsAttributes": {
+    "3000": {
+      "label": "Application",
+      "onAutoForward": "silent",
+      "elevateIfNeeded": false,
+      "requireLocalPort": true
+    }
+  }
+}
