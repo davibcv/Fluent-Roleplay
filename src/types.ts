@@ -260,6 +260,15 @@ export interface SimulatorState {
   daily_commitments?: string[];
   daily_objectives?: string[];
   commitments?: StoryCommitment[];
+  survival_mode?: boolean;
+  survival_initialized?: boolean;
+  money?: number;
+  hunger?: string;
+  financial_history?: any[];
+  job?: any;
+  rent_amount?: number;
+  last_rent_paid_month?: string;
+  last_meal_absolute_minute?: number;
 }
 
 export interface WeeklyPlanContent {
