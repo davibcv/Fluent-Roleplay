@@ -57,17 +57,14 @@ export default function SetupScreen({ username, baselineProficiency, nextGrammat
     }
   ];
 
-  const [showSurvivalConfirm, setShowSurvivalConfirm] = useState(false);
-  const [pendingCityName, setPendingCityName] = useState('');
-
-  const handleSelectCity = async (cityName: string, survivalMode = false) => {
+  const handleSelectCity = async (cityName: string) => {
     setLoading(true);
     setError('');
     try {
       const response = await apiFetch('/api/simulator-init', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ city: cityName, username, survivalMode }),
+        body: JSON.stringify({ city: cityName, username }),
       });
 
       if (!response.ok) {
@@ -163,35 +160,12 @@ export default function SetupScreen({ username, baselineProficiency, nextGrammat
                 </div>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-[#f0ebe0] space-y-2">
+              <div className="mt-6 pt-4 border-t border-[#f0ebe0]">
                 <button
-                  onClick={() => handleSelectCity(city.name, false)}
+                  onClick={() => handleSelectCity(city.name)}
                   className="w-full flex items-center justify-center gap-1.5 bg-classic-cream border border-[#e2dacb] hover:bg-classic-green hover:text-white hover:border-classic-green text-[#7d715e] py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer"
                 >
-                  Modo Pacífico
-                </button>
-                <button
-                  onClick={() => {
-                    setPendingCityName(city.name);
-                    setShowSurvivalConfirm(true);
-                    
-                    // Trigger TTS
-                    const textToSpeak = "O modo Sobrevivência adiciona elementos de simulação como dinheiro, alimentação, aluguel e responsabilidades profissionais. Ele foi criado para quem gosta de simuladores de vida ou prefere ter objetivos práticos que impulsionem a história. Se você deseja uma experiência mais casual, relaxada e focada apenas nas histórias, relacionamentos e exploração, recomendamos o modo Pacífico. Você poderá retornar ao modo Pacífico a qualquer momento posteriormente caso deseje.";
-                    if ('speechSynthesis' in window) {
-                      window.speechSynthesis.cancel();
-                      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-                      utterance.lang = 'pt-BR';
-                      utterance.rate = 1.0;
-                      // Try to find a Portuguese voice if possible
-                      const voices = window.speechSynthesis.getVoices();
-                      const ptVoice = voices.find(v => v.lang.toLowerCase().includes('pt'));
-                      if (ptVoice) utterance.voice = ptVoice;
-                      window.speechSynthesis.speak(utterance);
-                    }
-                  }}
-                  className="w-full flex items-center justify-center gap-1.5 bg-amber-50 border border-amber-200 hover:bg-amber-600 hover:text-white hover:border-amber-600 text-amber-800 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer"
-                >
-                  ⚡ Modo Sobrevivência
+                  Começar Jornada
                 </button>
               </div>
             </motion.div>
@@ -199,50 +173,7 @@ export default function SetupScreen({ username, baselineProficiency, nextGrammat
         </div>
       )}
 
-      {showSurvivalConfirm && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl max-w-lg w-full border border-[#e8e2d5] p-6 shadow-xl space-y-4"
-          >
-            <h3 className="text-xl font-serif font-bold text-classic-ink flex items-center gap-2">
-              ⚡ Ativar Modo Sobrevivência?
-            </h3>
-            <p className="text-sm text-[#7d715e] leading-relaxed">
-              O modo Sobrevivência adiciona elementos de simulação como dinheiro, alimentação, aluguel e responsabilidades profissionais. Ele foi criado para quem gosta de simuladores de vida ou prefere ter objetivos práticos que impulsionem a história.
-            </p>
-            <p className="text-xs text-[#8e8574] leading-relaxed">
-              Se você deseja uma experiência mais casual, relaxada e focada apenas nas histórias, relacionamentos e exploração, recomendamos o modo Pacífico. Você poderá retornar ao modo Pacífico a qualquer momento posteriormente caso deseje.
-            </p>
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                onClick={() => {
-                  if ('speechSynthesis' in window) {
-                    window.speechSynthesis.cancel();
-                  }
-                  setShowSurvivalConfirm(false);
-                }}
-                className="px-4 py-2 bg-classic-ivory border border-[#e2dacb] text-[#7d715e] rounded-xl text-xs font-semibold uppercase tracking-wider hover:bg-classic-cream transition-all cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => {
-                  if ('speechSynthesis' in window) {
-                    window.speechSynthesis.cancel();
-                  }
-                  setShowSurvivalConfirm(false);
-                  handleSelectCity(pendingCityName, true);
-                }}
-                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer shadow-sm"
-              >
-                Ativar e Confirmar
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
+      
 
       {error && (
         <div className="max-w-md mx-auto mt-8 bg-[#ff150008] border border-rose-500/20 text-rose-900 p-4 rounded-xl text-xs text-left space-y-2">
